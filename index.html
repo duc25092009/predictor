@@ -53,6 +53,22 @@ header {
 }
 input:checked + .slider { background: var(--T); }
 input:checked + .slider::before { transform: translateX(18px); }
+.game-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg3);
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+}
+.game-selector select {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+}
 main { padding-top: 18px; }
 .card {
   background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
@@ -244,6 +260,18 @@ footer {
       <small>LC79 · Live Sync</small>
     </div>
     <div class="header-status">
+      <div class="game-selector">
+        <span>🎮 Game:</span>
+        <select id="gameType" onchange="onGameChange()">
+          <option value="md5">MD5</option>
+          <option value="hu">Hũ</option>
+        </select>
+        <span id="apiVerLabel" style="display: inline;">🔧 Ver:</span>
+        <select id="apiVersion" onchange="onGameChange()">
+          <option value="v1">v1 (cũ)</option>
+          <option value="v2">v2 (mới)</option>
+        </select>
+      </div>
       <span id="statusBadge" class="loading">⟳ Khởi động</span>
       <div id="turboModeBtn" class="turbo-mode" onclick="toggleTurbo()">⚡ Turbo Mode</div>
       <div class="switch-wrap">
@@ -292,6 +320,19 @@ footer {
     </div>
   </div>
 
+  <!-- Card thống kê dự đoán và gợi ý -->
+  <div class="card" id="statsCard">
+    <div class="card-title">📊 Thống kê dự đoán</div>
+    <div class="stats-row" style="grid-template-columns: repeat(3,1fr);">
+      <div class="mini-stat"><div class="n" id="predictTotal">0</div><div class="l">Tổng dự đoán</div></div>
+      <div class="mini-stat"><div class="n" id="predictCorrect">0</div><div class="l">Đúng</div></div>
+      <div class="mini-stat"><div class="n" id="predictAccuracy">0%</div><div class="l">Tỉ lệ đúng</div></div>
+    </div>
+    <div id="suggestionBox" style="margin-top: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 8px; display: none;">
+      <span style="color: var(--gold);">💡 Gợi ý:</span> <span id="suggestionText"></span>
+    </div>
+  </div>
+
   <div class="stats-row">
     <div class="mini-stat"><div class="n" id="statTotal" style="color:var(--blue)">0</div><div class="l">Tổng phiên</div></div>
     <div class="mini-stat"><div class="n" id="statAcc" style="color:var(--T)">—%</div><div class="l">Độ chính xác</div></div>
@@ -313,28 +354,32 @@ footer {
   <div class="card">
     <div class="card-title">Lịch sử phiên <span style="color:var(--text2);font-size:10px" id="histCount">(0 phiên)</span></div>
     <div class="tbl-wrap">
-      <table>
-        <thead><tr><th>Phiên</th><th>Kết quả</th><th>Xúc xắc</th><th>Tổng</th><th>Dự đoán AI</th><th>Tin cậy</th><th>Đúng/Sai</th><th>Thời gian</th></tr></thead>
+       <table>
+        <thead> <tr><th>Phiên</th><th>Kết quả</th><th>Xúc xắc</th><th>Tổng</th><th>Dự đoán AI</th><th>Tin cậy</th><th>Đúng/Sai</th><th>Thời gian</th></tr> </thead>
         <tbody id="historyTbody"><tr><td colspan="8" style="text-align:center;padding:20px;">Chưa có dữ liệu</td></tr></tbody>
-      </table>
+       </table>
     </div>
   </div>
 </main>
 
-<!-- MODAL (giữ nguyên như cũ) -->
+<!-- MODAL (giữ nguyên) -->
 <div class="modal-overlay" id="analysisModal"><div class="modal"><h3>📊 Phân tích cầu chi tiết<span class="close-btn" onclick="closeModal('analysisModal')">×</span></h3><div class="modal-section"><div class="title">Thông tin cầu hiện tại</div><div class="modal-row"><span>Loại cầu</span><b id="m_cauLoai">—</b></div><div class="modal-row"><span>Độ dài cầu hiện tại</span><b id="m_cauLen">—</b></div><div class="modal-row"><span>Độ dài trung bình</span><b id="m_avgLen">—</b></div><div class="modal-row"><span>Cầu dài nhất lịch sử</span><b id="m_maxLen">—</b></div><div class="modal-row"><span>Tỉ lệ bẻ cầu</span><b id="m_breakRate">—</b></div></div><div class="modal-section"><div class="title">Các dấu hiệu phát hiện được</div><div id="m_signals">—</div></div><div class="modal-section"><div class="title">Khuyến nghị</div><div id="m_advice">—</div></div><div class="modal-section"><div class="title">Phân bố chuỗi lịch sử</div><div id="m_streakDist">—</div></div></div></div>
 <div class="modal-overlay" id="telegramModal"><div class="modal"><h3>🤖 Cảnh báo Telegram<span class="close-btn" onclick="closeModal('telegramModal')">×</span></h3><div class="tg-info"><b>Cách lấy Bot Token & Chat ID:</b><br>1. Tìm <code>@BotFather</code>, <code>/newbot</code> → lấy Token<br>2. Tìm <code>@userinfobot</code>, /start → lấy Chat ID</div><div class="tg-form"><input type="text" id="tgToken" placeholder="Bot Token"><input type="text" id="tgChatId" placeholder="Chat ID"><div style="display:flex;gap:8px;"><button class="btn primary" onclick="saveTgConfig()">💾 Lưu</button><button class="btn" onclick="testTelegram()">🧪 Test</button></div><div id="tgStatus"></div></div></div></div>
 
 <footer><p>⚠️ <b>Giải trí và tham khảo</b> — Không đảm bảo chính xác. Không đặt cược thật.</p><p>⚡ Auto mode mỗi 10 giây, so sánh với phiên hiện tại để bắt kịp.</p></footer>
 
 <script>
+// ========== CẤU HÌNH ==========
 const CONFIG = {
-  API_URL: 'https://lc79-betvip-api-production.up.railway.app/api/lc79_md5?key=apihdx',
+  API_URL_V1: 'https://lc79-betvip-api-production.up.railway.app/api/lc79_md5?key=apihdx',
+  API_URL_V2: 'http://160.250.137.196:5000/lc79-md5',
+  API_URL_HU: 'http://160.250.137.196:5000/lc79-hu',
   MAX_HIST: 50,
   AUTO_SECS: 10,
-  STORAGE_KEY: 'lc79_history_v6',
+  STORAGE_KEY: 'lc79_history_v7',
   TG_KEY: 'lc79_telegram',
 };
+
 let turboMode = localStorage.getItem('lc79_turbo') === 'true';
 let history = loadHistory();
 let autoTimer = null, cdTimer = null, cdRemain = CONFIG.AUTO_SECS;
@@ -343,12 +388,34 @@ let isFetching = false;
 
 function loadHistory() { try { return JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY) || '[]'); } catch { return []; } }
 function saveHistory() { localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(history)); }
-function loadTgConfig() { try { return JSON.parse(localStorage.getItem(CONFIG.TG_KEY) || '{}'); } catch { return {}; } }
-function saveTgConfigData(obj) { localStorage.setItem(CONFIG.TG_KEY, JSON.stringify(obj)); }
 
 const DICE_ICONS = {1:'⚀',2:'⚁',3:'⚂',4:'⚃',5:'⚄',6:'⚅'};
 function diceIcon(n) { return DICE_ICONS[n] || '?'; }
 
+// ========== GAME SELECTOR ==========
+function onGameChange() {
+  const game = document.getElementById('gameType').value;
+  const apiVer = document.getElementById('apiVersion').value;
+  if (game === 'hu') {
+    document.getElementById('apiVerLabel').style.display = 'none';
+    document.getElementById('apiVersion').style.display = 'none';
+  } else {
+    document.getElementById('apiVerLabel').style.display = 'inline';
+    document.getElementById('apiVersion').style.display = 'inline';
+  }
+  // Khi đổi game, làm mới dữ liệu
+  fetchData();
+  updateAccuracyDisplay(); // cập nhật thống kê
+}
+
+function getCurrentApiUrl() {
+  const game = document.getElementById('gameType').value;
+  if (game === 'hu') return CONFIG.API_URL_HU;
+  const ver = document.getElementById('apiVersion').value;
+  return ver === 'v1' ? CONFIG.API_URL_V1 : CONFIG.API_URL_V2;
+}
+
+// ========== TOOL DỰ ĐOÁN ==========
 function toggleTurbo() {
   turboMode = !turboMode;
   localStorage.setItem('lc79_turbo', turboMode);
@@ -364,64 +431,59 @@ async function fetchData() {
   setStatus('loading', '⟳ Đang kết nối...');
   const btn = document.getElementById('refreshBtn');
   btn.disabled = true;
-  
-  let success = false;
-  if (turboMode) {
-    const result = await tryFetchDirect(CONFIG.API_URL);
-    if (result.ok) { handleApiData(result.data); success = true; }
-    else setStatus('err', `✗ Direct fail: ${result.error}`);
-  } else {
-    const proxies = ['https://api.allorigins.win/raw?url=', 'https://corsproxy.io/?'];
-    for (let proxy of proxies) {
-      const result = await tryFetchProxy(proxy, CONFIG.API_URL);
-      if (result.ok) { handleApiData(result.data); success = true; break; }
+
+  const apiUrl = getCurrentApiUrl();
+  const gameType = document.getElementById('gameType').value;
+  const apiVersion = document.getElementById('apiVersion').value;
+
+  try {
+    let fetchUrl;
+    if (turboMode) {
+      fetchUrl = apiUrl;
+    } else {
+      fetchUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(apiUrl);
     }
+    const res = await fetch(fetchUrl);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    handleApiData(data, gameType, apiVersion);
+  } catch(e) {
+    setStatus('err', `✗ Lỗi: ${e.message}`);
+    console.error(e);
+  } finally {
+    isFetching = false;
+    btn.disabled = false;
   }
-  if (!success) setStatus('err', '✗ Không kết nối được');
-  isFetching = false;
-  btn.disabled = false;
 }
 
-async function tryFetchDirect(url) {
-  const ctrl = new AbortController();
-  const timeout = setTimeout(() => ctrl.abort(), 5000);
-  try {
-    const res = await fetch(url, { signal: ctrl.signal });
-    clearTimeout(timeout);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    return { ok: true, data };
-  } catch(e) { clearTimeout(timeout); return { ok: false, error: e.message }; }
-}
+function handleApiData(raw, gameType, apiVersion) {
+  let rec;
+  if (gameType === 'md5') {
+    if (apiVersion === 'v1') rec = parseRecordV1(raw);
+    else rec = parseRecordV2(raw);
+  } else {
+    rec = parseRecordHu(raw);
+  }
 
-async function tryFetchProxy(proxyUrl, targetUrl) {
-  const fetchUrl = proxyUrl + encodeURIComponent(targetUrl);
-  const ctrl = new AbortController();
-  const timeout = setTimeout(() => ctrl.abort(), 6000);
-  try {
-    const res = await fetch(fetchUrl, { signal: ctrl.signal });
-    clearTimeout(timeout);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    return { ok: true, data };
-  } catch(e) { clearTimeout(timeout); return { ok: false, error: e.message }; }
-}
+  if (!rec) {
+    setStatus('err', '✗ Parse lỗi');
+    showRawData(raw);
+    return;
+  }
 
-function handleApiData(raw) {
-  const rec = parseRecord(raw);
-  if (!rec) { setStatus('err', '✗ Parse lỗi'); showRawData(raw); return; }
-  
-  // Hiển thị phiên hiện tại (mới nhất từ web)
+  rec.gameType = gameType;
+  rec.apiVersion = apiVersion;
+
+  // Hiển thị phiên hiện tại (nếu có)
   const phienHienTai = raw.phien_hien_tai ?? rec.phien;
   document.getElementById('phienHienTai').textContent = phienHienTai || '—';
-  
-  // Nếu đã có phiên này rồi thì bỏ qua
+
   if (rec.phien && rec.phien === lastPhien) {
     setStatus('ok', `✓ Phiên ${rec.phien} — Đã có, chờ phiên mới`);
     return;
   }
-  
-  // Gắn dự đoán từ API
+
+  // Lấy dự đoán AI từ API nếu có (ưu tiên)
   if (raw.du_doan) {
     rec.ai_pred = normalizeResult(raw.du_doan);
     let confRaw = raw.do_tin_cay || '';
@@ -429,38 +491,41 @@ function handleApiData(raw) {
     rec.ai_conf = match ? parseInt(match[1]) : 50;
     rec.ai_note = `API: ${raw.ai_model || 'LC79'}`;
   } else {
-    const pred = predictNext(history);
+    // Fallback: dùng thuật toán nội bộ
+    const pred = predictNext(history.filter(h => h.gameType === gameType && h.apiVersion === apiVersion));
     rec.ai_pred = pred.result;
     rec.ai_conf = pred.conf;
     rec.ai_note = pred.note;
   }
-  
+
   // Kiểm tra dự đoán của phiên trước
   if (history.length > 0 && history[0].ai_pred && history[0].ai_check === undefined) {
     history[0].ai_check = (history[0].ai_pred === rec.ket_qua);
   }
-  
+
   history.unshift(rec);
   if (history.length > CONFIG.MAX_HIST) history.pop();
   if (rec.phien) lastPhien = rec.phien;
-  if (phienHienTai) lastPhienHienTai = phienHienTai;
   saveHistory();
-  
+
   updateCurrentDisplay(rec);
   updateStatsDisplay();
   updateStreakDisplay();
   updateHistoryTable();
+  updateAccuracyDisplay(); // cập nhật tỉ lệ đúng
   checkAlerts(rec);
-  
+
   setStatus('ok', `✓ Phiên ${rec.phien || '?'} — ${formatTime(new Date())}`);
   document.getElementById('rawDebug').style.display = 'none';
   const alertData = detectBreak(history.slice(1));
   if (alertData.alert) sendTelegramAlert(rec, alertData);
+
+  // Cập nhật gợi ý bẻ cầu
+  updateSuggestion(rec);
 }
 
-function parseRecord(raw) {
+function parseRecordV1(raw) {
   try {
-    if (!raw) return null;
     let phien = raw.phien ?? raw.phen ?? raw.id ?? 0;
     phien = parseInt(phien);
     let kqRaw = raw.ket_qua ?? raw.result ?? '';
@@ -477,6 +542,27 @@ function parseRecord(raw) {
     const tong = Number(raw.tong ?? (dice.length === 3 ? dice.reduce((a,b)=>a+b,0) : 0));
     const time = raw.thoi_gian ?? raw.time ?? new Date().toLocaleString('vi');
     return { phien, ket_qua: kq, tong, dice, time, ai_pred: null, ai_conf: null, ai_note: null, ai_check: undefined };
+  } catch(e) { return null; }
+}
+
+function parseRecordV2(raw) {
+  // Giả sử API v2 có cấu trúc tương tự v1 (có thể khác field)
+  return parseRecordV1(raw);
+}
+
+function parseRecordHu(raw) {
+  try {
+    let phien = raw.phien ?? raw.id ?? 0;
+    phien = parseInt(phien);
+    let kqRaw = raw.ket_qua ?? raw.result ?? '';
+    let kq = normalizeResult(kqRaw);
+    if (!kq) return null;
+    let dice = []; // có thể không có
+    let tong = raw.tong ?? 0;
+    let time = raw.time ?? new Date().toLocaleString('vi');
+    let ai_pred = raw.du_doan;
+    let ai_conf = raw.do_tin_cay ? parseInt(String(raw.do_tin_cay).match(/\d+/)?.[0] || 50) : 50;
+    return { phien, ket_qua: kq, tong, dice, time, ai_pred, ai_conf, ai_note: 'Hũ', ai_check: undefined };
   } catch(e) { return null; }
 }
 
@@ -619,7 +705,7 @@ function updateStreakDisplay() {
 
 function updateHistoryTable() {
   const tbody = document.getElementById('historyTbody');
-  if (!history.length) { tbody.innerHTML = '的人<td colspan="8" style="text-align:center;">Chưa có dữ liệu</td></tr>'; return; }
+  if (!history.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Chưa có dữ liệu</td></tr>'; return; }
   tbody.innerHTML = history.map(h => {
     const kqBadge = `<span class="badge ${h.ket_qua}">${h.ket_qua === 'tai' ? 'TÀI' : 'XỈU'}</span>`;
     const predBadge = h.ai_pred ? `<span class="badge ${h.ai_pred}">${h.ai_pred === 'tai' ? 'TÀI' : 'XỈU'}</span>` : '—';
@@ -628,6 +714,38 @@ function updateHistoryTable() {
     const checkIcon = h.ai_check === undefined ? '—' : h.ai_check ? '<span class="ok-icon">✓</span>' : '<span class="fail-icon">✗</span>';
     return `<tr><td class="mono" style="color:var(--gold)">${h.phien}</td><td>${kqBadge}</td><td class="mono">${diceStr}</td><td>${h.tong}</td><td>${predBadge}</td><td>${confStr}</td><td style="text-align:center">${checkIcon}</td><td style="font-size:11px">${formatTimeShort(h.time)}</td></tr>`;
   }).join('');
+}
+
+function updateAccuracyDisplay() {
+  const game = document.getElementById('gameType').value;
+  const ver = document.getElementById('apiVersion').value;
+  const filtered = history.filter(h => h.gameType === game && h.apiVersion === ver && h.ai_check !== undefined);
+  const total = filtered.length;
+  const correct = filtered.filter(h => h.ai_check === true).length;
+  const acc = total ? Math.round(correct / total * 100) : 0;
+  document.getElementById('predictTotal').innerText = total;
+  document.getElementById('predictCorrect').innerText = correct;
+  document.getElementById('predictAccuracy').innerText = acc + '%';
+}
+
+function updateSuggestion(rec) {
+  const game = document.getElementById('gameType').value;
+  const ver = document.getElementById('apiVersion').value;
+  const filtered = history.filter(h => h.gameType === game && h.apiVersion === ver && h.ai_check !== undefined);
+  if (filtered.length < 2) return;
+  // Lấy 5 gần nhất
+  const recent = filtered.slice(0, 5);
+  const consecutiveLoss = recent.filter(h => h.ai_check === false).length;
+  const suggestionBox = document.getElementById('suggestionBox');
+  const suggestionText = document.getElementById('suggestionText');
+  if (consecutiveLoss >= 2) {
+    const lastPred = recent[0].ai_pred;
+    const opposite = lastPred === 'tai' ? 'xiu' : 'tai';
+    suggestionText.innerText = `⚠️ Đã thua ${consecutiveLoss} ván liên tiếp. Cân nhắc đánh ${opposite === 'tai' ? 'TÀI' : 'XỈU'} để bẻ cầu.`;
+    suggestionBox.style.display = 'block';
+  } else {
+    suggestionBox.style.display = 'none';
+  }
 }
 
 function checkAlerts(rec) {
@@ -683,7 +801,7 @@ function exportCSV() {
 function clearHistory() {
   if (!confirm('Xóa toàn bộ lịch sử?')) return;
   history = []; lastPhien = 0; saveHistory();
-  updateStatsDisplay(); updateStreakDisplay(); updateHistoryTable();
+  updateStatsDisplay(); updateStreakDisplay(); updateHistoryTable(); updateAccuracyDisplay();
   document.getElementById('alertBox').style.display = 'none';
   document.getElementById('mainCard').classList.remove('alert-blink');
   alert('✓ Đã xóa lịch sử');
@@ -709,6 +827,9 @@ function toggleAuto() {
     document.getElementById('countdownBar').style.display = 'none';
   }
 }
+
+function loadTgConfig() { try { return JSON.parse(localStorage.getItem(CONFIG.TG_KEY) || '{}'); } catch { return {}; } }
+function saveTgConfigData(obj) { localStorage.setItem(CONFIG.TG_KEY, JSON.stringify(obj)); }
 
 function saveTgConfig() {
   const token = document.getElementById('tgToken').value.trim();
@@ -753,7 +874,7 @@ function showRawData(data) { document.getElementById('rawDebug').style.display =
 if (turboMode) { document.getElementById('turboModeBtn').classList.add('active'); document.getElementById('turboModeBtn').innerHTML = '⚡ Turbo ON'; }
 if (history.length > 0) {
   lastPhien = history[0].phien || 0;
-  updateStatsDisplay(); updateStreakDisplay(); updateHistoryTable();
+  updateStatsDisplay(); updateStreakDisplay(); updateHistoryTable(); updateAccuracyDisplay();
   updateCurrentDisplay(history[0]);
   checkAlerts(history[0]);
   setStatus('ok', `✓ Đã có ${history.length} phiên`);
